@@ -71,11 +71,13 @@ const StreamSession = ({
   apiKey,
   apiUrl,
   assistantId,
+  authToken,
 }: {
   children: ReactNode;
   apiKey: string | null;
   apiUrl: string;
   assistantId: string;
+  authToken: string;
 }) => {
   const [threadId, setThreadId] = useQueryState("threadId");
   const { getThreads, setThreads } = useThreads();
@@ -84,7 +86,9 @@ const StreamSession = ({
     apiKey: apiKey ?? undefined,
     assistantId,
     threadId: threadId ?? null,
-    fetchStateHistory: true,
+    defaultHeaders: {
+      Authorization: `Bearer ${authToken}`, // this is where you would pass your authentication token
+    },
     onCustomEvent: (event, options) => {
       if (isUIMessage(event) || isRemoveUIMessage(event)) {
         options.mutate((prev) => {
@@ -127,8 +131,8 @@ const StreamSession = ({
 };
 
 // Default values for the form
-const DEFAULT_API_URL = "http://localhost:2024";
-const DEFAULT_ASSISTANT_ID = "agent";
+const DEFAULT_API_URL = "http://localhost:8123";
+const DEFAULT_ASSISTANT_ID = "supervisor_agent";
 
 export const StreamProvider: React.FC<{ children: ReactNode }> = ({
   children,
@@ -137,6 +141,7 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
   const envApiUrl: string | undefined = process.env.NEXT_PUBLIC_API_URL;
   const envAssistantId: string | undefined =
     process.env.NEXT_PUBLIC_ASSISTANT_ID;
+  const envAuthToken: string | undefined = process.env.NEXT_PUBLIC_AUTHORIZATION_TOKEN;
 
   // Use URL params with env var fallbacks
   const [apiUrl, setApiUrl] = useQueryState("apiUrl", {
@@ -144,6 +149,9 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
   });
   const [assistantId, setAssistantId] = useQueryState("assistantId", {
     defaultValue: envAssistantId || "",
+  });
+  const [authToken, setAuthToken] = useQueryState("authToken", {
+    defaultValue: envAuthToken || "",
   });
 
   // For API key, use localStorage with env var fallback
@@ -160,9 +168,10 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
   // Determine final values to use, prioritizing URL params then env vars
   const finalApiUrl = apiUrl || envApiUrl;
   const finalAssistantId = assistantId || envAssistantId;
+  const finalAuthToken = authToken || envAuthToken;
 
   // Show the form if we: don't have an API URL, or don't have an assistant ID
-  if (!finalApiUrl || !finalAssistantId) {
+  if (!finalApiUrl || !finalAssistantId || !finalAuthToken) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center p-4">
         <div className="animate-in fade-in-0 zoom-in-95 bg-background flex max-w-3xl flex-col rounded-lg border shadow-lg">
@@ -187,10 +196,12 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
               const apiUrl = formData.get("apiUrl") as string;
               const assistantId = formData.get("assistantId") as string;
               const apiKey = formData.get("apiKey") as string;
+              const authToken = formData.get("authToken") as string;
 
               setApiUrl(apiUrl);
               setApiKey(apiKey);
               setAssistantId(assistantId);
+              setAuthToken(authToken);
 
               form.reset();
             }}
@@ -248,6 +259,23 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
               />
             </div>
 
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="authToken">Authorization Token</Label>
+              <p className="text-muted-foreground text-sm">
+                This is the PingFed SSO token used to make the request to the LangGraph server.
+                This value is stored in your browser's local storage and
+                is only used to authenticate requests sent to your LangGraph
+                server.
+              </p>
+              <PasswordInput
+                id="authToken"
+                name="authToken"
+                defaultValue={authToken ?? ""}
+                className="bg-background"
+                placeholder="eyJh..."
+              />
+            </div>
+
             <div className="mt-2 flex justify-end">
               <Button
                 type="submit"
@@ -268,6 +296,7 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
       apiKey={apiKey}
       apiUrl={apiUrl}
       assistantId={assistantId}
+      authToken={authToken}
     >
       {children}
     </StreamSession>
