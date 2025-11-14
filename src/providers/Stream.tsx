@@ -86,6 +86,7 @@ const StreamSession = ({
     apiKey: apiKey ?? undefined,
     assistantId,
     threadId: threadId ?? null,
+    fetchStateHistory: true,
     defaultHeaders: {
       Authorization: `Bearer ${authToken}`, // this is where you would pass your authentication token
     },
@@ -131,7 +132,7 @@ const StreamSession = ({
 };
 
 // Default values for the form
-const DEFAULT_API_URL = "http://localhost:8123";
+const DEFAULT_API_URL = "http://localhost:2024";
 const DEFAULT_ASSISTANT_ID = "supervisor_agent";
 
 export const StreamProvider: React.FC<{ children: ReactNode }> = ({
